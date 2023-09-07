@@ -57,6 +57,7 @@ class Conversation:
     def get_prompt(self) -> str:
         """Get the prompt for generation."""
         system_prompt = self.system_template.format(system_message=self.system_message)
+        print(f"Conversion::get_prompt, system_prompt:{system_prompt} and self.sep_style:{self.sep_style}")
         if self.sep_style == SeparatorStyle.ADD_COLON_SINGLE:
             ret = system_prompt + self.sep
             for role, message in self.messages:
@@ -64,6 +65,7 @@ class Conversation:
                     ret += role + ": " + message + self.sep
                 else:
                     ret += role + ":"
+            print(f"Conversion::get_prompt, ret:{ret}")
             return ret
         elif self.sep_style == SeparatorStyle.ADD_COLON_TWO:
             seps = [self.sep, self.sep2]
@@ -280,6 +282,7 @@ def register_conv_template(template: Conversation, override: bool = False):
 
 def get_conv_template(name: str) -> Conversation:
     """Get a conversation template."""
+    print(f"get_conv_template,name:{name}")
     return conv_templates[name].copy()
 
 

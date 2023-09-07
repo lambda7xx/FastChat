@@ -193,7 +193,7 @@ def main(args):
             )
         os.environ["CUDA_VISIBLE_DEVICES"] = args.gpus
         os.environ["XPU_VISIBLE_DEVICES"] = args.gpus
-
+    print(f"args.style:{args.style} and args.multiline:{args.multiline} and args.mouse:{args.mouse}")
     if args.style == "simple":
         chatio = SimpleChatIO(args.multiline)
     elif args.style == "rich":
@@ -203,6 +203,7 @@ def main(args):
     else:
         raise ValueError(f"Invalid style for console: {args.style}")
     try:
+        print(f"args.awq_wbits:{args.awq_wbits} and args.awq_groupsize:{args.awq_groupsize}")
         chat_loop(
             args.model_path,
             args.device,

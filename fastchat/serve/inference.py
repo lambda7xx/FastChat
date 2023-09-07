@@ -311,19 +311,21 @@ def chat_loop(
         revision=revision,
         debug=debug,
     )
-    generate_stream_func = get_generate_stream_function(model, model_path)
+    generate_stream_func = get_generate_stream_function(model, model_path)#得到generate_stream函数
 
     model_type = str(type(model)).lower()
+    print("Model type:", model_type)
     is_t5 = "t5" in model_type
     is_codet5p = "codet5p" in model_type
-
+    print(f"***chat_loop, is_t5:{is_t5}, is_codet5p:{is_codet5p} and repetition_penalty:{repetition_penalty}***")
     # Hardcode T5's default repetition penalty to be 1.2
     if is_t5 and repetition_penalty == 1.0:
         repetition_penalty = 1.2
 
     # Set context length
+    #print(f"***chat_loop, model.config:{model.config}***")
     context_len = get_context_length(model.config)
-
+    print(f"***chat_loop, context_len:{context_len} and conv_template:{conv_template} and conv_system_msg:{conv_system_msg}***")
     # Chat
     def new_chat():
         if conv_template:
@@ -349,10 +351,10 @@ def chat_loop(
             conv = new_chat()
 
         try:
-            inp = chatio.prompt_for_input(conv.roles[0])
+            inp = chatio.prompt_for_input(conv.roles[0])#用户输入
         except EOFError:
             inp = ""
-
+        print(f"***chat_loop, inp:{inp}***")
         if inp == "!!exit" or not inp:
             print("exit...")
             break
@@ -443,7 +445,7 @@ def chat_loop(
 
         if is_codet5p:  # codet5p is a code completion model.
             prompt = inp
-
+        print(f"***chat_loop, prompt:{prompt} and temperature:{temperature} and  repetition_penalty:{repetition_penalty}***")
         gen_params = {
             "model": model_path,
             "prompt": prompt,
@@ -456,7 +458,7 @@ def chat_loop(
         }
 
         try:
-            chatio.prompt_for_output(conv.roles[1])
+            chatio.prompt_for_output(conv.roles[1])#机器人输出
             output_stream = generate_stream_func(
                 model,
                 tokenizer,
@@ -464,7 +466,7 @@ def chat_loop(
                 device,
                 context_len=context_len,
                 judge_sent_end=judge_sent_end,
-            )
+            )#调用generate_stream函数
             t = time.time()
             outputs = chatio.stream_output(output_stream)
             duration = time.time() - t

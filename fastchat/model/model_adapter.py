@@ -159,7 +159,7 @@ def load_model(
 ):
     """Load a model from Hugging Face."""
     # get model adapter
-    adapter = get_model_adapter(model_path)
+    adapter = get_model_adapter(model_path) #得到对应的model adapter，T5/Vicuna
 
     # Handle device mapping
     cpu_offloading = raise_warning_for_incompatible_cpu_offloading_configuration(
@@ -265,13 +265,14 @@ def load_model(
     kwargs["revision"] = revision
 
     # Load model
-    model, tokenizer = adapter.load_model(model_path, kwargs)
+    print(f"model_adapter, kwargs: {kwargs}")
+    model, tokenizer = adapter.load_model(model_path, kwargs) #导入model adapter，加载模型,得到
 
     if (device == "cuda" and num_gpus == 1 and not cpu_offloading) or device in (
         "mps",
         "xpu",
     ):
-        model.to(device)
+        model.to(device) #将模型放到device上，默认是cuda
 
     if device == "xpu":
         model = torch.xpu.optimize(model, dtype=kwargs["torch_dtype"], inplace=True)
@@ -293,11 +294,12 @@ def get_generate_stream_function(model: torch.nn.Module, model_path: str):
     from fastchat.serve.inference import generate_stream
 
     model_type = str(type(model)).lower()
+    print(f"get_generate_stream_function, model_type: {model_type}")
     is_chatglm = "chatglm" in model_type
     is_falcon = "rwforcausallm" in model_type
     is_codet5p = "codet5p" in model_type
     is_peft = "peft" in model_type
-
+    print(f"get_generate_stream_function, is_chatglm: {is_chatglm} and is_falcon: {is_falcon} and is_codet5p: {is_codet5p} and is_peft: {is_peft}")
     if is_chatglm:
         return generate_stream_chatglm
     elif is_falcon:
