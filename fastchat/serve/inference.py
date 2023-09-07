@@ -78,17 +78,16 @@ def generate_stream(
     stop_str = params.get("stop", None)
     stop_token_ids = params.get("stop_token_ids", None) or []
     stop_token_ids.append(tokenizer.eos_token_id)
-
+    print(f"***generate_stream,temperature:{temperature} and repetition_penalty:{repetition_penalty} and top_p:{top_p} top_k:{top_k}***")
     logits_processor = prepare_logits_processor(
         temperature, repetition_penalty, top_p, top_k
     )
-    input_ids = tokenizer(prompt).input_ids
-
+    input_ids = tokenizer(prompt).input_ids #输入端prompt对应的token id
     if model.config.is_encoder_decoder:
         max_src_len = context_len
     else:  # truncate
         max_src_len = context_len - max_new_tokens - 1
-
+    print(f"***generate_stream, model.config.is_encoder_decoder:{model.config.is_encoder_decoder} and context_len:{context_len} and max_new_token:{max_new_tokens} and max_src_len:{max_src_len}***")
     input_ids = input_ids[-max_src_len:]
     output_ids = list(input_ids)
     input_echo_len = len(input_ids)
@@ -115,7 +114,7 @@ def generate_stream(
                 )
                 logits = model.lm_head(out[0])
             else:
-                out = model(torch.as_tensor([input_ids], device=device), use_cache=True)
+                out = model(torch.as_tensor([input_ids], device=device), use_cache=True)#forward計算
                 logits = out.logits
             past_key_values = out.past_key_values
         else:  # decoding
@@ -161,9 +160,11 @@ def generate_stream(
             tokens = [int(index) for index in indices.tolist()]
         else:
             probs = torch.softmax(last_token_logits, dim=-1)
-            indices = torch.multinomial(probs, num_samples=2)
+            indices = torch.multinomial(probs, num_samples=2) ## 从多项分布中抽取5个样本
+            print(f"last_token_logits.shape:{last_token_logits.shape} and probs.shape:{probs.shape} and indices.shape:{indiece.shape}")
             tokens = [int(token) for token in indices.tolist()]
-        token = tokens[0]
+            print(f"len(tokens):{len(tokens)} ")
+        token = tokens[0]#TODO, 为什么是第一个元素？
         output_ids.append(token)
 
         if token in stop_token_ids:
