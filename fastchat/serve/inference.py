@@ -87,11 +87,12 @@ def generate_stream(
         max_src_len = context_len
     else:  # truncate
         max_src_len = context_len - max_new_tokens - 1
-    print(f"***generate_stream, model.config.is_encoder_decoder:{model.config.is_encoder_decoder} and context_len:{context_len} and max_new_token:{max_new_tokens} and max_src_len:{max_src_len}***")
+    print(f"***1 generate_stream, model.config.is_encoder_decoder:{model.config.is_encoder_decoder} and context_len:{context_len} and max_new_token:{max_new_tokens} and max_src_len:{max_src_len} and input_ids.shape:{input_ids.shape}***")
     input_ids = input_ids[-max_src_len:]
+    print(f"***2 new input_ids.shape:{input_ids.shape}***"")
     output_ids = list(input_ids)
     input_echo_len = len(input_ids)
-
+    print(f"3 output_ids:{len(output_ids)} and input_echo_len:{input_echo_len}***")
     if model.config.is_encoder_decoder:
         encoder_output = model.encoder(
             input_ids=torch.as_tensor([input_ids], device=device)
@@ -101,6 +102,7 @@ def generate_stream(
             dtype=torch.int64,
             device=device,
         )
+        print(f"4 encoder_output.shape:{encoder_output.shape} and start_ids.shape:{start_ids.shape}")
 
     past_key_values = out = None
     sent_interrupt = False
@@ -117,6 +119,7 @@ def generate_stream(
                 out = model(torch.as_tensor([input_ids], device=device), use_cache=True)#forward計算
                 logits = out.logits
             past_key_values = out.past_key_values
+            print(f"5 out.shape:{out.shape} and logits.shape:{logits.shape} and past_key_values.shape:{past_key_values.shape} ")
         else:  # decoding
             if model.config.is_encoder_decoder:
                 out = model.decoder(
@@ -141,7 +144,8 @@ def generate_stream(
                 sent_interrupt = False
                 logits = out.logits
             past_key_values = out.past_key_values
-
+            print(f"6 out.shape:{out.shape} and logits.shape:{logits.shape} and past_key_values.shape:{past_key_values.shape} ")
+        print(f"7 logits_processor:{logits_processor} and repetition_penalty:{repetition_penalty}")
         if logits_processor:
             if repetition_penalty > 1.0:
                 tmp_output_ids = torch.as_tensor([output_ids], device=logits.device)
@@ -150,6 +154,11 @@ def generate_stream(
             last_token_logits = logits_processor(tmp_output_ids, logits[:, -1, :])[0]
         else:
             last_token_logits = logits[0, -1, :]
+        print(f"8 last_token_logits.shape:{last_token_logits.shape} and last_token_logits:{last_token_logits} and last_token_logits.dtype:{last_token_logits.dtype}")
+            ###logits[0, -1, :] 通常用于提取batch中第一个样本的最后一个时间步的所有特征/类别的logits。
+            #如，假设你正在处理一个NLP任务，并且你的logits tensor有形状(batch_size, sequence_length, num_classes)，
+            # 那么logits[0, -1, :]将返回第一个样本的最后一个词的所有类别的logits。
+            ####
 
         if device == "mps":
             # Switch to CPU by avoiding some bugs in mps backend.
@@ -161,11 +170,12 @@ def generate_stream(
         else:
             probs = torch.softmax(last_token_logits, dim=-1)
             indices = torch.multinomial(probs, num_samples=2) ## 从多项分布中抽取5个样本
-            print(f"last_token_logits.shape:{last_token_logits.shape} and probs.shape:{probs.shape} and indices.shape:{indiece.shape}")
+            print(f"9 last_token_logits.shape:{last_token_logits.shape} and probs.shape:{probs.shape} and indices.shape:{indices.shape}")
             tokens = [int(token) for token in indices.tolist()]
-            print(f"len(tokens):{len(tokens)} ")
+            print(f"10 len(tokens):{len(tokens)} and token:{tokens}")
         token = tokens[0]#TODO, 为什么是第一个元素？
         output_ids.append(token)
+        
 
         if token in stop_token_ids:
             stopped = True
@@ -173,6 +183,7 @@ def generate_stream(
             stopped = False
 
         # Yield the output tokens
+        print(f"10 i:{i} and stream_interval:{stream_interval} and max_new_tokens:{max_new_tokens} and stopped:{stopped} and echo:{echo}")
         if i % stream_interval == 0 or i == max_new_tokens - 1 or stopped:
             if echo:
                 tmp_output_ids = output_ids
@@ -186,8 +197,9 @@ def generate_stream(
                 skip_special_tokens=True,
                 spaces_between_special_tokens=False,
                 clean_up_tokenization_spaces=True,
-            )
+            ) #将output id转换为文本
             # TODO: For the issue of incomplete sentences interrupting output, apply a patch and others can also modify it to a more elegant way
+            print(f"11 judge_sent_end:{judge_sent_end} and stopped:{stopped} and is_sentence_complete(output):{is_sentence_complete(output)}")
             if judge_sent_end and stopped and not is_sentence_complete(output):
                 if len(tokens) > 1:
                     token = tokens[1]
@@ -318,7 +330,7 @@ def chat_loop(
     print("Model type:", model_type)
     is_t5 = "t5" in model_type
     is_codet5p = "codet5p" in model_type
-    print(f"***chat_loop, is_t5:{is_t5}, is_codet5p:{is_codet5p} and repetition_penalty:{repetition_penalty}***")
+    print(f"***1 chat_loop, is_t5:{is_t5}, is_codet5p:{is_codet5p} and repetition_penalty:{repetition_penalty}***")
     # Hardcode T5's default repetition penalty to be 1.2
     if is_t5 and repetition_penalty == 1.0:
         repetition_penalty = 1.2
@@ -326,7 +338,7 @@ def chat_loop(
     # Set context length
     #print(f"***chat_loop, model.config:{model.config}***")
     context_len = get_context_length(model.config)
-    print(f"***chat_loop, context_len:{context_len} and conv_template:{conv_template} and conv_system_msg:{conv_system_msg}***")
+    print(f"***2 chat_loop, context_len:{context_len} and conv_template:{conv_template} and conv_system_msg:{conv_system_msg}***")
     # Chat
     def new_chat():
         if conv_template:
@@ -335,6 +347,7 @@ def chat_loop(
             conv = get_conversation_template(model_path)
         if conv_system_msg is not None:
             conv.set_system_message(conv_system_msg)
+        print(f"new_chat, conv:{conv} and conv_template:{conv_template} and conv_system_msg:{conv_system_msg}***")
         return conv
 
     def reload_conv(conv):
@@ -355,7 +368,7 @@ def chat_loop(
             inp = chatio.prompt_for_input(conv.roles[0])#用户输入
         except EOFError:
             inp = ""
-        print(f"***chat_loop, inp:{inp}***")
+        print(f"***3 chat_loop, inp:{inp}***")
         if inp == "!!exit" or not inp:
             print("exit...")
             break
@@ -446,7 +459,7 @@ def chat_loop(
 
         if is_codet5p:  # codet5p is a code completion model.
             prompt = inp
-        print(f"***chat_loop, prompt:{prompt} and temperature:{temperature} and  repetition_penalty:{repetition_penalty}***")
+        print(f"***4 chat_loop, prompt:{prompt} and temperature:{temperature} and  repetition_penalty:{repetition_penalty}***")
         gen_params = {
             "model": model_path,
             "prompt": prompt,
@@ -459,6 +472,7 @@ def chat_loop(
         }
 
         try:
+            print(f"***5 chat_loop, conv.roles[1]:{conv.roles[1]}***")
             chatio.prompt_for_output(conv.roles[1])#机器人输出
             output_stream = generate_stream_func(
                 model,
@@ -471,8 +485,9 @@ def chat_loop(
             t = time.time()
             outputs = chatio.stream_output(output_stream)
             duration = time.time() - t
+            print(f"***6 chat_loop, type(outputs):{type(outputs)} and outputs.stip():{outputs.strip()}***")
             conv.update_last_message(outputs.strip())
-
+            debuf = True 
             if debug:
                 num_tokens = len(tokenizer.encode(outputs))
                 msg = {

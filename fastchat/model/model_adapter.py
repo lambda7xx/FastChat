@@ -107,6 +107,7 @@ def get_model_adapter(model_path: str) -> BaseModelAdapter:
     model_path_basename = os.path.basename(os.path.normpath(model_path))
 
     # Try the basename of model_path at first
+    print(f"get_model_adapter, model_adapters: {model_adapters}")
     for adapter in model_adapters:
         if adapter.match(model_path_basename) and type(adapter) != BaseModelAdapter:
             return adapter
@@ -197,7 +198,7 @@ def load_model(
             )
     else:
         raise ValueError(f"Invalid device: {device}")
-
+    print(f"***load_model, awq_config:{awq_config}")
     if cpu_offloading:
         # raises an error on incompatible platforms
         from transformers import BitsAndBytesConfig
@@ -265,7 +266,7 @@ def load_model(
     kwargs["revision"] = revision
 
     # Load model
-    print(f"model_adapter, kwargs: {kwargs}")
+    print(f"load_model, model_adapter, kwargs: {kwargs}")
     model, tokenizer = adapter.load_model(model_path, kwargs) #导入model adapter，加载模型,得到
 
     if (device == "cuda" and num_gpus == 1 and not cpu_offloading) or device in (
@@ -299,7 +300,7 @@ def get_generate_stream_function(model: torch.nn.Module, model_path: str):
     is_falcon = "rwforcausallm" in model_type
     is_codet5p = "codet5p" in model_type
     is_peft = "peft" in model_type
-    print(f"get_generate_stream_function, is_chatglm: {is_chatglm} and is_falcon: {is_falcon} and is_codet5p: {is_codet5p} and is_peft: {is_peft}")
+    print(f"get_generate_stream_function, is_chatglm: {is_chatglm} and is_falcon: {is_falcon} and is_codet5p: {is_codet5p} and is_peft: {is_peft} ")
     if is_chatglm:
         return generate_stream_chatglm
     elif is_falcon:
@@ -444,7 +445,7 @@ class PeftModelAdapter:
     def load_model(self, model_path: str, from_pretrained_kwargs: dict):
         """Loads the base model then the (peft) adapter weights"""
         from peft import PeftConfig, PeftModel
-
+        print(f"PeftModelAdapter, load_model, model_path: {model_path} and from_pretrained_kwargs: {from_pretrained_kwargs}")
         config = PeftConfig.from_pretrained(model_path)
         base_model_path = config.base_model_name_or_path
         if "peft" in base_model_path:

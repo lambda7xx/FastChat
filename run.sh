@@ -1,0 +1,1 @@
+python3 -m fastchat.serve.model_worker --model-path lmsys/vicuna-7b-v1.3 > ci.log 2>&1 &
