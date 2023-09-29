@@ -78,7 +78,7 @@ def generate_stream(
     stop_str = params.get("stop", None)
     stop_token_ids = params.get("stop_token_ids", None) or []
     stop_token_ids.append(tokenizer.eos_token_id)
-    print(f"***generate_stream,temperature:{temperature} and repetition_penalty:{repetition_penalty} and top_p:{top_p} top_k:{top_k}***")
+    print(f"0***generate_stream,temperature:{temperature} and repetition_penalty:{repetition_penalty} and top_p:{top_p} top_k:{top_k}***")
     logits_processor = prepare_logits_processor(
         temperature, repetition_penalty, top_p, top_k
     )
@@ -87,12 +87,12 @@ def generate_stream(
         max_src_len = context_len
     else:  # truncate
         max_src_len = context_len - max_new_tokens - 1
-    print(f"***1 generate_stream, model.config.is_encoder_decoder:{model.config.is_encoder_decoder} and context_len:{context_len} and max_new_token:{max_new_tokens} and max_src_len:{max_src_len} and input_ids.shape:{input_ids.shape}***")
+    print(f"***1 generate_stream, model.config.is_encoder_decoder:{model.config.is_encoder_decoder} and context_len:{context_len} and max_new_token:{max_new_tokens} and max_src_len:{max_src_len} and len(input_ids):{len(input_ids)}***")
     input_ids = input_ids[-max_src_len:]
-    print(f"***2 new input_ids.shape:{input_ids.shape}***"")
+    print(f"***2 generate_stream new input_ids.shape:{len(input_ids)}***")
     output_ids = list(input_ids)
     input_echo_len = len(input_ids)
-    print(f"3 output_ids:{len(output_ids)} and input_echo_len:{input_echo_len}***")
+    print(f"3 generate_stream output_ids:{len(output_ids)} and input_echo_len:{input_echo_len}***")
     if model.config.is_encoder_decoder:
         encoder_output = model.encoder(
             input_ids=torch.as_tensor([input_ids], device=device)
@@ -102,7 +102,7 @@ def generate_stream(
             dtype=torch.int64,
             device=device,
         )
-        print(f"4 encoder_output.shape:{encoder_output.shape} and start_ids.shape:{start_ids.shape}")
+        print(f"4 generate_stream encoder_output.shape:{encoder_output.shape} and start_ids.shape:{start_ids.shape}")
 
     past_key_values = out = None
     sent_interrupt = False
@@ -119,7 +119,7 @@ def generate_stream(
                 out = model(torch.as_tensor([input_ids], device=device), use_cache=True)#forward計算
                 logits = out.logits
             past_key_values = out.past_key_values
-            print(f"5 out.shape:{out.shape} and logits.shape:{logits.shape} and past_key_values.shape:{past_key_values.shape} ")
+            print(f"5 generate_stream type(out):{type(out)} and logits.shape:{logits.shape}  ") #logits.shape:torch.Size([1, 40, 32000]) for vicnua 7b. 40 is the prompt length
         else:  # decoding
             if model.config.is_encoder_decoder:
                 out = model.decoder(
@@ -144,8 +144,8 @@ def generate_stream(
                 sent_interrupt = False
                 logits = out.logits
             past_key_values = out.past_key_values
-            print(f"6 out.shape:{out.shape} and logits.shape:{logits.shape} and past_key_values.shape:{past_key_values.shape} ")
-        print(f"7 logits_processor:{logits_processor} and repetition_penalty:{repetition_penalty}")
+            #print(f"6 out.shape:{out.shape} and logits.shape:{logits.shape} and past_key_values.shape:{past_key_values.shape} ")
+        print(f"7 generate_stream logits_processor:{logits_processor} and repetition_penalty:{repetition_penalty}")
         if logits_processor:
             if repetition_penalty > 1.0:
                 tmp_output_ids = torch.as_tensor([output_ids], device=logits.device)
@@ -154,7 +154,7 @@ def generate_stream(
             last_token_logits = logits_processor(tmp_output_ids, logits[:, -1, :])[0]
         else:
             last_token_logits = logits[0, -1, :]
-        print(f"8 last_token_logits.shape:{last_token_logits.shape} and last_token_logits:{last_token_logits} and last_token_logits.dtype:{last_token_logits.dtype}")
+        print(f"8 generate_stream last_token_logits.shape:{last_token_logits.shape} and last_token_logits.shape:{last_token_logits.shape} and last_token_logits.dtype:{last_token_logits.dtype}")
             ###logits[0, -1, :] 通常用于提取batch中第一个样本的最后一个时间步的所有特征/类别的logits。
             #如，假设你正在处理一个NLP任务，并且你的logits tensor有形状(batch_size, sequence_length, num_classes)，
             # 那么logits[0, -1, :]将返回第一个样本的最后一个词的所有类别的logits。
@@ -170,21 +170,23 @@ def generate_stream(
         else:
             probs = torch.softmax(last_token_logits, dim=-1)
             indices = torch.multinomial(probs, num_samples=2) ## 从多项分布中抽取5个样本
-            print(f"9 last_token_logits.shape:{last_token_logits.shape} and probs.shape:{probs.shape} and indices.shape:{indices.shape}")
+            print(f"9 generate_stream last_token_logits.shape:{last_token_logits.shape} and probs.shape:{probs.shape} and indices.shape:{indices.shape}")
             tokens = [int(token) for token in indices.tolist()]
-            print(f"10 len(tokens):{len(tokens)} and token:{tokens}")
+            print(f"10 generate_stream len(tokens):{len(tokens)} and token:{tokens}")
         token = tokens[0]#TODO, 为什么是第一个元素？
         output_ids.append(token)
         
-
+        print(f"10.5 generate_stream, token:{token} and stop_token_ids:{stop_token_ids}")
         if token in stop_token_ids:
             stopped = True
         else:
             stopped = False
+        #20230928 注: 当token是stop_token_ids中的元素时，stopped为True，否则为False，即stopped表示是否停止生成，在不断的生成的时候，stopped总有机会设置为true
 
         # Yield the output tokens
-        print(f"10 i:{i} and stream_interval:{stream_interval} and max_new_tokens:{max_new_tokens} and stopped:{stopped} and echo:{echo}")
+        print(f"11 generate_stream i:{i} and stream_interval:{stream_interval} and max_new_tokens:{max_new_tokens} and stopped:{stopped} and echo:{echo}")
         if i % stream_interval == 0 or i == max_new_tokens - 1 or stopped:
+            #这里的判断条件是，每隔stream_interval个token，或者是最后一个token，或者是stopped为True时，就会执行下面的代码
             if echo:
                 tmp_output_ids = output_ids
                 rfind_start = len_prompt
@@ -199,10 +201,10 @@ def generate_stream(
                 clean_up_tokenization_spaces=True,
             ) #将output id转换为文本
             # TODO: For the issue of incomplete sentences interrupting output, apply a patch and others can also modify it to a more elegant way
-            print(f"11 judge_sent_end:{judge_sent_end} and stopped:{stopped} and is_sentence_complete(output):{is_sentence_complete(output)}")
+            print(f"12 generate_stream i:{i} and stop_str:{stop_str} and  judge_sent_end:{judge_sent_end} and stopped:{stopped} and is_sentence_complete(output):{is_sentence_complete(output)}")
             if judge_sent_end and stopped and not is_sentence_complete(output):
                 if len(tokens) > 1:
-                    token = tokens[1]
+                    token = tokens[1] #TODO, 为什么是第二个元素？
                     output_ids[-1] = token
                 else:
                     output_ids.pop()
@@ -212,6 +214,7 @@ def generate_stream(
             partially_stopped = False
             if stop_str:
                 if isinstance(stop_str, str):
+                    print(f"13 generate_stream i:{i} and stop_str:{stop_str} and rfind_start:{rfind_start} and output:{output}")
                     pos = output.rfind(stop_str, rfind_start)
                     if pos != -1:
                         output = output[:pos]
@@ -219,6 +222,7 @@ def generate_stream(
                     else:
                         partially_stopped = is_partial_stop(output, stop_str)
                 elif isinstance(stop_str, Iterable):
+                    print(f"14 generate_stream i:{i} and stop_str:{stop_str} and rfind_start:{rfind_start} and output:{output}")
                     for each_stop in stop_str:
                         pos = output.rfind(each_stop, rfind_start)
                         if pos != -1:
@@ -233,7 +237,8 @@ def generate_stream(
                     raise ValueError("Invalid stop field type.")
 
             # Prevent yielding partial stop sequence
-            if not partially_stopped:
+            #使用yield关键字的代码，用于从生成器函数中返回一个值，但不终止函数的执行，允许下次从上次停止的地方继续执行。
+            if not partially_stopped: 
                 yield {
                     "text": output,
                     "usage": {

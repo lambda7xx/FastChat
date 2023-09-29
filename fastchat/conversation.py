@@ -55,9 +55,11 @@ class Conversation:
     stop_token_ids: List[int] = None
 
     def get_prompt(self) -> str:
+        print(f"-1 Conversion::get_prompt, the name:{self.name}")
         """Get the prompt for generation."""
+        print(f"0 Conversion::get_prompt, self.system_template:{self.system_template} and self.sep:{self.sep} and self.sep2:{self.sep2}")
         system_prompt = self.system_template.format(system_message=self.system_message)
-        print(f"Conversion::get_prompt, system_prompt:{system_prompt} and self.sep_style:{self.sep_style}")
+        print(f"1 Conversion::get_prompt, system_prompt:{system_prompt} and self.sep_style:{self.sep_style}")
         if self.sep_style == SeparatorStyle.ADD_COLON_SINGLE:
             ret = system_prompt + self.sep
             for role, message in self.messages:
@@ -69,12 +71,16 @@ class Conversation:
             return ret
         elif self.sep_style == SeparatorStyle.ADD_COLON_TWO:
             seps = [self.sep, self.sep2]
+            print(f"3 Conversion::get_prompt, seps:{seps} and self.messages:{self.messages} and name:{self.name}")
             ret = system_prompt + seps[0]
+            print(f"4 Conversion::get_prompt, ret:{ret}")
             for i, (role, message) in enumerate(self.messages):
+                print(f"5 Conversion::get_prompt, i:{i} and role:{role} and message:{message}")
                 if message:
                     ret += role + ": " + message + seps[i % 2]
                 else:
                     ret += role + ":"
+                print(f"6 Conversion::get_prompt, ret:{ret}")
             return ret
         elif self.sep_style == SeparatorStyle.ADD_COLON_SPACE_SINGLE:
             ret = system_prompt + self.sep

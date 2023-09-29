@@ -107,7 +107,7 @@ def get_model_adapter(model_path: str) -> BaseModelAdapter:
     model_path_basename = os.path.basename(os.path.normpath(model_path))
 
     # Try the basename of model_path at first
-    print(f"get_model_adapter, model_adapters: {model_adapters}")
+    #print(f"get_model_adapter, model_adapters: {model_adapters}")
     for adapter in model_adapters:
         if adapter.match(model_path_basename) and type(adapter) != BaseModelAdapter:
             return adapter
