@@ -73,6 +73,7 @@ def generate_stream_falcon(
 
     for i, new_text in enumerate(streamer):
         output += new_text
+        print(f"model_falcon, i: {i}, new_text: {new_text} and output:{output}")
         if i % stream_interval == 0:
             if echo:
                 rfind_start = len_prompt

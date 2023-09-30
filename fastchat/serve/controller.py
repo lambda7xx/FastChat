@@ -281,6 +281,7 @@ async def list_models():
 async def get_worker_address(request: Request):
     data = await request.json()
     addr = controller.get_worker_address(data["model"])
+    print(f"get_worker_address: {addr}")
     return {"address": addr}
 
 

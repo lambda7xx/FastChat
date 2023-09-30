@@ -219,6 +219,7 @@ class ModelWorker(BaseModelWorker):
             self.tokenizer.pad_token = self.tokenizer.eos_token
         self.context_len = get_context_length(self.model.config)
         self.generate_stream_func = get_generate_stream_function(self.model, model_path)
+        print(f"model_worker, self.generate_stream_func: {self.generate_stream_func}")
         self.stream_interval = stream_interval
 
         if not no_register:
@@ -277,7 +278,7 @@ class ModelWorker(BaseModelWorker):
             is_chatglm = "chatglm" in str(type(self.model))
             is_t5 = "t5" in str(type(self.model))
             is_bert = "bert" in str(type(self.model))
-
+            print(f"model_worker, is_llama: {is_llama}, is_chatglm: {is_chatglm}, is_t5: {is_t5}, is_bert: {is_bert}")
             if is_llama:
                 encoding = tokenizer.batch_encode_plus(
                     params["input"], padding=True, return_tensors="pt"
@@ -373,6 +374,7 @@ def create_background_tasks():
 async def api_generate_stream(request: Request):
     params = await request.json()
     await acquire_worker_semaphore()
+    print(f"api_generate_stream: {params}")
     generator = worker.generate_stream_gate(params)
     background_tasks = create_background_tasks()
     return StreamingResponse(generator, background=background_tasks)
