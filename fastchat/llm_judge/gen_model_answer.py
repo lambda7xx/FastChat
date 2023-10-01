@@ -30,6 +30,7 @@ def run_eval(
     num_gpus_total,
     max_gpu_memory,
 ):
+    print(f"model_path: {model_path} and model_id: {model_id} and question_begin:{question_begin} and question_end: {question_end} and answer_file: {answer_file} and max_new_token: {max_new_token} and num_choices: {num_choices} and num_gpus_per_model: {num_gpus_per_model} and num_gpus_total: {num_gpus_total} and max_gpu_memory: {max_gpu_memory}")
     questions = load_questions(question_file, question_begin, question_end)
     # random shuffle the questions to balance the loading
     random.shuffle(questions)
@@ -102,6 +103,7 @@ def get_model_answers(
                 conv.append_message(conv.roles[0], qs)
                 conv.append_message(conv.roles[1], None)
                 prompt = conv.get_prompt()
+                print(f"prompt: {prompt}")
                 input_ids = tokenizer([prompt]).input_ids
 
                 if temperature < 1e-4:
@@ -117,6 +119,8 @@ def get_model_answers(
                         temperature=temperature,
                         max_new_tokens=max_new_token,
                     )
+                    #print(f"moddel")
+                    print(f"type(output_ids): {type(output_ids)} and len(output_ids): {len(output_ids)}")
                     if model.config.is_encoder_decoder:
                         output_ids = output_ids[0]
                     else:
@@ -125,6 +129,7 @@ def get_model_answers(
                         output_ids,
                         spaces_between_special_tokens=False,
                     )
+                    print(f"conv.stop_str: {conv.stop_str} ")
                     if conv.stop_str and output.find(conv.stop_str) > 0:
                         output = output[: output.find(conv.stop_str)]
                     for special_token in tokenizer.special_tokens_map.values():
@@ -133,6 +138,7 @@ def get_model_answers(
                                 output = output.replace(special_tok, "")
                         else:
                             output = output.replace(special_token, "")
+                    print(f"1 output: {output} and output.strip(): {output.strip()}")
                     output = output.strip()
 
                     if conv.name == "xgen" and output.startswith("Assistant:"):
@@ -231,6 +237,7 @@ if __name__ == "__main__":
         ray.init()
 
     question_file = f"data/{args.bench_name}/question.jsonl"
+    print(f"args.bench_name: {args.bench_name} and args.answer_file: {args.answer_file}")
     if args.answer_file:
         answer_file = args.answer_file
     else:

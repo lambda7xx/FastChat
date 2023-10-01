@@ -77,7 +77,7 @@ class Controller:
             logger.info(f"Register a new worker: {worker_name}")
         else:
             logger.info(f"Register an existing worker: {worker_name}")
-
+        print(f"worker_status:{worker_status}")
         if not worker_status:
             worker_status = self.get_worker_status(worker_name)
         if not worker_status:
@@ -127,6 +127,7 @@ class Controller:
         return list(model_names)
 
     def get_worker_address(self, model_name: str):
+        print(f"get_worker_address, self.dispatch_method:{self.dispatch_method}")
         if self.dispatch_method == DispatchMethod.LOTTERY:
             worker_names = []
             worker_speeds = []
@@ -163,6 +164,7 @@ class Controller:
         elif self.dispatch_method == DispatchMethod.SHORTEST_QUEUE:
             worker_names = []
             worker_qlen = []
+            print(f"self.worker_info:{self.worker_info}")
             for w_name, w_info in self.worker_info.items():
                 if model_name in w_info.model_names:
                     worker_names.append(w_name)
@@ -261,6 +263,7 @@ app = FastAPI()
 @app.post("/register_worker")
 async def register_worker(request: Request):
     data = await request.json()
+    print(f"register_worker, data[’worker_name‘]:{data['worker_name']}")
     controller.register_worker(
         data["worker_name"], data["check_heart_beat"], data.get("worker_status", None)
     )
@@ -274,6 +277,7 @@ async def refresh_all_workers():
 @app.post("/list_models")
 async def list_models():
     models = controller.list_models()
+    print(f"list_models: {models}")
     return {"models": models}
 
 
